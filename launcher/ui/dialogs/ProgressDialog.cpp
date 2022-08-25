@@ -43,8 +43,8 @@ void ProgressDialog::setSkipButton(bool present, QString label)
 void ProgressDialog::on_skipButton_clicked(bool checked)
 {
     Q_UNUSED(checked);
-    if (task->abort())
-        QDialog::reject();
+    if (task)
+        task->abort();
 }
 
 ProgressDialog::~ProgressDialog()
@@ -135,6 +135,9 @@ void ProgressDialog::onTaskStarted() {}
 void ProgressDialog::onTaskFailed(QString failure)
 {
     reject();
+
+    // HACK: This is a workaround for the fact that aborted tasks maintain the dialog open for some reason????
+    hide();
 }
 
 void ProgressDialog::onTaskSucceeded()
