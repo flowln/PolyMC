@@ -79,7 +79,7 @@ class ModrinthAPI : public NetworkModAPI {
     inline auto getModSearchURL(SearchArgs& args) const -> QString override
     {
         if (!validateModLoaders(args.loaders)) {
-            qWarning() << "Modrinth only have Forge and Fabric-compatible mods!";
+            qWarning() << "Invalid loader(s) for Modrinth's mod search request!";
             return "";
         }
 
