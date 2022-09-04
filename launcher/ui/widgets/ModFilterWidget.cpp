@@ -39,9 +39,6 @@ unique_qobject_ptr<ModFilterWidget> ModFilterWidget::create(Config&& conf, QWidg
 ModFilterWidget::ModFilterWidget(Config&& conf, QWidget* parent)
     : QTabWidget(parent), m_filter(new Filter()),  ui(new Ui::ModFilterWidget)
 {
-    // Check that there's only one default loader if the 'allow_multiple_loaders' flag is false
-    Q_ASSERT(conf.allow_multiple_loaders || ((conf.default_loaders - 1) & conf.default_loaders) == 0);
-
     ui->setupUi(this);
 
     {
