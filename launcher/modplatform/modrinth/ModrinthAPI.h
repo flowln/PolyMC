@@ -62,8 +62,6 @@ class ModrinthAPI : public NetworkModAPI {
                 l << ModAPI::getModLoaderString(loader);
             }
         }
-        if ((types & Quilt) && (~types & Fabric))  // Add Fabric if Quilt is in use, if Fabric isn't already there
-            l << ModAPI::getModLoaderString(Fabric);
         return l;
     }
 
