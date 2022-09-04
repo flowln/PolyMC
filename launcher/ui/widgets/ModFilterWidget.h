@@ -71,8 +71,8 @@ private:
     inline auto mcVersion() const -> Version { return { mcVersionStr() }; }
 
 private slots:
-    void onVersionFilterChanged(int id);
-    void onLoaderFilterChanged(int id);
+    void onVersionFilterChanged(QAbstractButton* btn);
+    void onLoaderFilterChanged(QAbstractButton* btn);
 
 public: signals:
     void filterChanged();

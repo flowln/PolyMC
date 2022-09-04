@@ -51,7 +51,7 @@ ModFilterWidget::ModFilterWidget(Config&& conf, QWidget* parent)
         m_mcVersion_buttons.addButton(ui->allVersionsButton,     VersionButtonID::All);
         //m_mcVersion_buttons.addButton(ui->betweenVersionsButton, VersionButtonID::Between);
 
-        connect(&m_mcVersion_buttons, SIGNAL(idClicked(int)), this, SLOT(onVersionFilterChanged(int)));
+        connect(&m_mcVersion_buttons, qOverload<QAbstractButton*>(&QButtonGroup::buttonClicked), this, &ModFilterWidget::onVersionFilterChanged);
     }
 
     {
@@ -83,7 +83,7 @@ ModFilterWidget::ModFilterWidget(Config&& conf, QWidget* parent)
         if (conf.default_loaders.testFlag(ModAPI::Quilt))
             m_loader_buttons.button(LoaderButtonID::Quilt)->setChecked(true);
 
-        connect(&m_loader_buttons, &QButtonGroup::idClicked, this, &ModFilterWidget::onLoaderFilterChanged);
+        connect(&m_loader_buttons, qOverload<QAbstractButton*>(&QButtonGroup::buttonClicked), this, &ModFilterWidget::onLoaderFilterChanged);
     }
 
     m_filter->versions.push_front(conf.default_version);
@@ -165,14 +165,14 @@ void ModFilterWidget::disableVersionButton(VersionButtonID id, QString reason)
     }
 }
 
-void ModFilterWidget::onVersionFilterChanged(int id)
+void ModFilterWidget::onVersionFilterChanged(QAbstractButton* btn)
 {
     //ui->lowerVersionComboBox->setEnabled(id == VersionButtonID::Between);
     //ui->upperVersionComboBox->setEnabled(id == VersionButtonID::Between);
 
     int index = 1;
 
-    auto cast_id = (VersionButtonID) id;
+    auto cast_id = (VersionButtonID) m_mcVersion_buttons.id(btn);
     if (cast_id != m_version_id) {
         m_version_id = cast_id;
     } else {
@@ -212,8 +212,10 @@ void ModFilterWidget::onVersionFilterChanged(int id)
         emit filterUnchanged();
 }
 
-void ModFilterWidget::onLoaderFilterChanged(int id)
+void ModFilterWidget::onLoaderFilterChanged(QAbstractButton* btn)
 {
+    auto id = m_loader_buttons.id(btn);
+
     if (m_loader_buttons.exclusive()) {
         m_filter->mod_loaders &= 0;
         switch(id) {
