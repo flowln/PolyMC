@@ -59,6 +59,21 @@ ModrinthModPage::ModrinthModPage(ModDownloadDialog* dialog, BaseInstance* instan
     connect(ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &ModrinthModPage::onSelectionChanged);
     connect(ui->versionSelectionBox, &QComboBox::currentTextChanged, this, &ModrinthModPage::onVersionSelectionChanged);
     connect(ui->modSelectionButton, &QPushButton::clicked, this, &ModrinthModPage::onModSelected);
+
+    auto const& pack_profile = static_cast<MinecraftInstance*>(instance)->getPackProfile();
+
+    // Add Fabric to loaders since Quilt can load those for the most part
+    auto loaders = pack_profile->getModLoaders();
+    if (loaders.testFlag(ModAPI::Quilt))
+        loaders.setFlag(ModAPI::Fabric);
+
+    ModFilterWidget::Config conf {
+        pack_profile->getComponentVersion("net.minecraft"),
+        true,
+        loaders,
+    };
+    auto filter_widget = ModFilterWidget::create(std::move(conf), this);
+    setFilterWidget(filter_widget);
 }
 
 auto ModrinthModPage::validateVersion(ModPlatform::IndexedVersion& ver, QString mineVer, ModAPI::ModLoaderTypes loaders) const -> bool

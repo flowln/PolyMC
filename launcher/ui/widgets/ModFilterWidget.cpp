@@ -3,9 +3,11 @@
 
 #include "Application.h"
 
-unique_qobject_ptr<ModFilterWidget> ModFilterWidget::create(Version default_version, QWidget* parent)
+#include <QCheckBox>
+
+unique_qobject_ptr<ModFilterWidget> ModFilterWidget::create(Config&& conf, QWidget* parent)
 {
-    auto filter_widget = new ModFilterWidget(default_version, parent);
+    auto filter_widget = new ModFilterWidget(std::move(conf), parent);
 
     if (!filter_widget->versionList()->isLoaded()) {
         QEventLoop load_version_list_loop;
@@ -34,20 +36,58 @@ unique_qobject_ptr<ModFilterWidget> ModFilterWidget::create(Version default_vers
     return unique_qobject_ptr<ModFilterWidget>(filter_widget);
 }
 
-ModFilterWidget::ModFilterWidget(Version def, QWidget* parent)
+ModFilterWidget::ModFilterWidget(Config&& conf, QWidget* parent)
     : QTabWidget(parent), m_filter(new Filter()),  ui(new Ui::ModFilterWidget)
 {
+    // Check that there's only one default loader if the 'allow_multiple_loaders' flag is false
+    Q_ASSERT(conf.allow_multiple_loaders || ((conf.default_loaders - 1) & conf.default_loaders) == 0);
+
     ui->setupUi(this);
 
-    m_mcVersion_buttons.addButton(ui->strictVersionButton,   VersionButtonID::Strict);
-    ui->strictVersionButton->click();
-    m_mcVersion_buttons.addButton(ui->majorVersionButton,    VersionButtonID::Major);
-    m_mcVersion_buttons.addButton(ui->allVersionsButton,     VersionButtonID::All);
-    //m_mcVersion_buttons.addButton(ui->betweenVersionsButton, VersionButtonID::Between);
+    {
+        m_mcVersion_buttons.addButton(ui->strictVersionButton,   VersionButtonID::Strict);
+        ui->strictVersionButton->click();
+        m_mcVersion_buttons.addButton(ui->majorVersionButton,    VersionButtonID::Major);
+        m_mcVersion_buttons.addButton(ui->allVersionsButton,     VersionButtonID::All);
+        //m_mcVersion_buttons.addButton(ui->betweenVersionsButton, VersionButtonID::Between);
 
-    connect(&m_mcVersion_buttons, SIGNAL(idClicked(int)), this, SLOT(onVersionFilterChanged(int)));
+        connect(&m_mcVersion_buttons, SIGNAL(idClicked(int)), this, SLOT(onVersionFilterChanged(int)));
+    }
 
-    m_filter->versions.push_front(def);
+    {
+        QAbstractButton *fabric_btn = nullptr, *forge_btn = nullptr, *quilt_btn = nullptr;
+        if (conf.allow_multiple_loaders) {
+            fabric_btn = new QCheckBox(tr("Fabric"), ui->LoaderPage);
+            forge_btn = new QCheckBox(tr("Forge"), ui->LoaderPage);
+            quilt_btn = new QCheckBox(tr("Quilt"), ui->LoaderPage);
+        } else {
+            fabric_btn = new QRadioButton(tr("Fabric"), ui->LoaderPage);
+            forge_btn = new QRadioButton(tr("Forge"), ui->LoaderPage);
+            quilt_btn = new QRadioButton(tr("Quilt"), ui->LoaderPage);
+        }
+
+        m_loader_buttons.addButton(fabric_btn, LoaderButtonID::Fabric);
+        m_loader_buttons.addButton(forge_btn, LoaderButtonID::Forge);
+        m_loader_buttons.addButton(quilt_btn, LoaderButtonID::Quilt);
+
+        m_loader_buttons.setExclusive(!conf.allow_multiple_loaders);
+
+        ui->loaderPageLayout->setWidget(0, QFormLayout::LabelRole, fabric_btn);
+        ui->loaderPageLayout->setWidget(1, QFormLayout::LabelRole, forge_btn);
+        ui->loaderPageLayout->setWidget(2, QFormLayout::LabelRole, quilt_btn);
+
+        if (conf.default_loaders.testFlag(ModAPI::Fabric))
+            m_loader_buttons.button(LoaderButtonID::Fabric)->setChecked(true);
+        if (conf.default_loaders.testFlag(ModAPI::Forge))
+            m_loader_buttons.button(LoaderButtonID::Forge)->setChecked(true);
+        if (conf.default_loaders.testFlag(ModAPI::Quilt))
+            m_loader_buttons.button(LoaderButtonID::Quilt)->setChecked(true);
+
+        connect(&m_loader_buttons, &QButtonGroup::idClicked, this, &ModFilterWidget::onLoaderFilterChanged);
+    }
+
+    m_filter->versions.push_front(conf.default_version);
+    m_filter->mod_loaders = conf.default_loaders;
 
     m_version_list = APPLICATION->metadataIndex()->get("net.minecraft");
     setHidden(true);
@@ -57,32 +97,46 @@ void ModFilterWidget::setInstance(MinecraftInstance* instance)
 {
     m_instance = instance;
 
-    ui->strictVersionButton->setText(
-        tr("Strict match (= %1)").arg(mcVersionStr()));
+    {
+        ui->strictVersionButton->setText(
+            tr("Strict match (= %1)").arg(mcVersionStr()));
 
-    // we can't do this for snapshots sadly
-    if(mcVersionStr().contains('.'))
-    {
-        auto mcVersionSplit = mcVersionStr().split(".");
-        ui->majorVersionButton->setText(
-            tr("Major version match (= %1.%2.x)").arg(mcVersionSplit[0], mcVersionSplit[1]));
+        // we can't do this for snapshots sadly
+        if(mcVersionStr().contains('.'))
+        {
+            auto mcVersionSplit = mcVersionStr().split(".");
+            ui->majorVersionButton->setText(
+                tr("Major version match (= %1.%2.x)").arg(mcVersionSplit[0], mcVersionSplit[1]));
+        }
+        else
+        {
+            ui->majorVersionButton->setText(tr("Major version match (unsupported)"));
+            disableVersionButton(Major);
+        }
+        ui->allVersionsButton->setText(
+            tr("Any version"));
+        //ui->betweenVersionsButton->setText(
+        //    tr("Between two versions"));
     }
-    else
-    {
-        ui->majorVersionButton->setText(tr("Major version match (unsupported)"));
-        disableVersionButton(Major);
-    }
-    ui->allVersionsButton->setText(
-        tr("Any version"));
-    //ui->betweenVersionsButton->setText(
-    //    tr("Between two versions"));
 }
 
 auto ModFilterWidget::getFilter() -> std::shared_ptr<Filter>
 {
     m_last_version_id = m_version_id;
+    m_last_loader_state = m_filter->mod_loaders;
+
     emit filterUnchanged();
+
     return m_filter;
+}
+
+bool ModFilterWidget::changed() const
+{
+    if (m_last_version_id != m_version_id)
+        return true;
+    if (m_last_loader_state != m_filter->mod_loaders)
+        return true;
+    return false;
 }
 
 void ModFilterWidget::disableVersionButton(VersionButtonID id, QString reason)
@@ -156,6 +210,47 @@ void ModFilterWidget::onVersionFilterChanged(int id)
         emit filterChanged();
     else
         emit filterUnchanged();
+}
+
+void ModFilterWidget::onLoaderFilterChanged(int id)
+{
+    if (m_loader_buttons.exclusive()) {
+        m_filter->mod_loaders &= 0;
+        switch(id) {
+            case(LoaderButtonID::Fabric):
+                m_filter->mod_loaders |= ModAPI::Fabric;
+                break;
+            case(LoaderButtonID::Forge):
+                m_filter->mod_loaders |= ModAPI::Forge;
+                break;
+            case(LoaderButtonID::Quilt):
+                m_filter->mod_loaders |= ModAPI::Quilt;
+                break;
+            default:
+                qWarning() << "Invalid ID in onLoaderFilterChanged";
+        }
+    } else {
+        // XOR to toggle.
+        switch(id) {
+            case(LoaderButtonID::Fabric):
+                m_filter->mod_loaders ^= ModAPI::Fabric;
+                break;
+            case(LoaderButtonID::Forge):
+                m_filter->mod_loaders ^= ModAPI::Forge;
+                break;
+            case(LoaderButtonID::Quilt):
+                m_filter->mod_loaders ^= ModAPI::Quilt;
+                break;
+            default:
+                qWarning() << "Invalid ID in onLoaderFilterChanged";
+        }
+    }
+
+    if (changed())
+        emit filterChanged();
+    else
+        emit filterUnchanged();
+
 }
 
 ModFilterWidget::~ModFilterWidget()

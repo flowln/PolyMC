@@ -2,8 +2,7 @@
 
 #include "BuildConfig.h"
 #include "Json.h"
-#include "minecraft/MinecraftInstance.h"
-#include "minecraft/PackProfile.h"
+#include "ModPage.h"
 #include "ui/dialogs/ModDownloadDialog.h"
 
 #include <QMessageBox>
@@ -87,17 +86,13 @@ auto ListModel::data(const QModelIndex& index, int role) const -> QVariant
 
 void ListModel::requestModVersions(ModPlatform::IndexedPack const& current)
 {
-    auto profile = (dynamic_cast<MinecraftInstance*>((dynamic_cast<ModPage*>(parent()))->m_instance))->getPackProfile();
-
-    m_parent->apiProvider()->getVersions(this, { current.addonId.toString(), getMineVersions(), profile->getModLoaders() });
+    m_parent->apiProvider()->getVersions(this, { current.addonId.toString(), getMineVersions(), getModLoaders() });
 }
 
 void ListModel::performPaginatedSearch()
 {
-    auto profile = (dynamic_cast<MinecraftInstance*>((dynamic_cast<ModPage*>(parent()))->m_instance))->getPackProfile();
-
     m_parent->apiProvider()->searchMods(
-        this, { nextSearchOffset, currentSearchTerm, getSorts()[currentSort], profile->getModLoaders(), getMineVersions() });
+        this, { nextSearchOffset, currentSearchTerm, getSorts()[currentSort], getModLoaders(), getMineVersions() });
 }
 
 void ListModel::requestModInfo(ModPlatform::IndexedPack& current)
@@ -296,4 +291,9 @@ void ListModel::versionRequestSucceeded(QJsonDocument doc, QString addonId)
 auto ModPlatform::ListModel::getMineVersions() const -> std::list<Version>
 {
     return m_parent->getFilter()->versions;
+}
+
+ModAPI::ModLoaderTypes ModPlatform::ListModel::getModLoaders() const
+{
+    return m_parent->getFilter()->mod_loaders;
 }

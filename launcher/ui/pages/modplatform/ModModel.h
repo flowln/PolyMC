@@ -69,6 +69,7 @@ class ListModel : public QAbstractListModel {
     void requestLogo(QString file, QString url);
 
     inline auto getMineVersions() const -> std::list<Version>;
+    inline auto getModLoaders() const -> ModAPI::ModLoaderTypes;
 
    protected:
     ModPage* m_parent;

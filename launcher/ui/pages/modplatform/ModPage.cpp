@@ -205,7 +205,7 @@ void ModPage::updateModVersions(int prev_count)
         bool valid = false;
         for(auto& mcVer : m_filter->versions){
             //NOTE: Flame doesn't care about loader, so passing it changes nothing.
-            if (validateVersion(version, mcVer.toString(), packProfile->getModLoaders())) {
+            if (validateVersion(version, mcVer.toString(), m_filter->mod_loaders)) {
                 valid = true;
                 break;
             }

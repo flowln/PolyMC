@@ -16,6 +16,9 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="currentIndex">
+   <number>1</number>
+  </property>
   <widget class="QWidget" name="VersionPage">
    <attribute name="title">
     <string>Minecraft versions</string>
@@ -45,6 +48,16 @@
        </widget>
       </item>
      </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="LoaderPage">
+   <attribute name="title">
+    <string>Mod loaders</string>
+   </attribute>
+   <layout class="QFormLayout" name="formLayout_3">
+    <item row="0" column="0">
+     <layout class="QFormLayout" name="loaderPageLayout"/>
     </item>
    </layout>
   </widget>

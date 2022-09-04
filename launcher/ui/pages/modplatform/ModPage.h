@@ -24,10 +24,6 @@ class ModPage : public QWidget, public BasePage {
     static T* create(ModDownloadDialog* dialog, BaseInstance* instance)
     {
         auto page = new T(dialog, instance);
-
-        auto filter_widget = ModFilterWidget::create(static_cast<MinecraftInstance*>(instance)->getPackProfile()->getComponentVersion("net.minecraft"), page);
-        page->setFilterWidget(filter_widget);
-
         return page;
     }
 

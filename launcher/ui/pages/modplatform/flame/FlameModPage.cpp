@@ -59,6 +59,15 @@ FlameModPage::FlameModPage(ModDownloadDialog* dialog, BaseInstance* instance)
     connect(ui->packView->selectionModel(), &QItemSelectionModel::currentChanged, this, &FlameModPage::onSelectionChanged);
     connect(ui->versionSelectionBox, &QComboBox::currentTextChanged, this, &FlameModPage::onVersionSelectionChanged);
     connect(ui->modSelectionButton, &QPushButton::clicked, this, &FlameModPage::onModSelected);
+
+    auto const& pack_profile = static_cast<MinecraftInstance*>(instance)->getPackProfile();
+    ModFilterWidget::Config conf {
+        pack_profile->getComponentVersion("net.minecraft"),
+        false, // TODO: Figure out a way of querying for various mod loaders in CF
+        pack_profile->getModLoaders(),
+    };
+    auto filter_widget = ModFilterWidget::create(std::move(conf), this);
+    setFilterWidget(filter_widget);
 }
 
 auto FlameModPage::validateVersion(ModPlatform::IndexedVersion& ver, QString mineVer, ModAPI::ModLoaderTypes loaders) const -> bool
